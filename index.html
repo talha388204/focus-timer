@@ -1,0 +1,829 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Focus Timer by Talha — Single File</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0b0f14"/>
+<link id="manifest-link" rel="manifest" href="">
+<style>
+  /* ====== Spotify-ish Dark + Glassmorphism ====== */
+  :root{
+    --bg:#0b0f14; --panel:#0f1620; --glass:rgba(255,255,255,.06);
+    --accent:#f7b500; --muted:#9aa4b2; --ok:#22c55e; --danger:#ef4444;
+    --ring:0 0 0 2px rgba(247,181,0,.35);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; font:16px/1.4 Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    color:#dce3ec; background:radial-gradient(1200px 600px at 5% 0%, #122030 0%, transparent 60%),
+                     radial-gradient(900px 600px at 100% 0%, #0f2714 0%, transparent 55%),
+                     var(--bg);
+    overflow: hidden;
+  }
+  .container{height:100%; display:flex; flex-direction:column}
+  header{
+    backdrop-filter: blur(10px); background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+    border:1px solid rgba(255,255,255,.08); border-radius:16px; margin:16px; padding:12px 16px; box-shadow:0 8px 32px rgba(0,0,0,.45);
+    display:flex; align-items:center; gap:12px;
+  }
+  .brand{display:flex; align-items:center; gap:10px; font-weight:700}
+  .pill{display:inline-flex; align-items:center; gap:8px; background:rgba(255,255,255,.06); padding:6px 10px; border-radius:999px; font-size:12px}
+  .green-dot{width:6px;height:6px;border-radius:999px;background:#22c55e}
+  nav{display:flex; gap:8px; margin:0 16px 16px}
+  .tab{
+    background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.08); color:#dce3ec;
+    padding:10px 14px; border-radius:12px; cursor:pointer; user-select:none; transition:transform .12s ease, background .2s;
+  }
+  .tab[aria-selected="true"]{background:linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.04)); outline: none; box-shadow:var(--ring)}
+  .row{flex:1; display:grid; grid-template-columns:1.25fr .75fr; gap:16px; padding:0 16px 16px; min-height:0}
+  .card{
+    height:100%; background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+    border:1px solid rgba(255,255,255,.08); border-radius:16px; box-shadow:0 8px 32px rgba(0,0,0,.45);
+    padding:16px; overflow:auto;
+  }
+  h2{margin:0 0 12px; letter-spacing:.2px}
+  .grid{display:grid; gap:12px}
+  .btn{
+    background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1); color:#e7edf6;
+    padding:10px 14px; border-radius:12px; cursor:pointer; transition:filter .15s ease, transform .06s ease;
+  }
+  .btn:hover{filter:brightness(1.1)}
+  .btn:active{transform:translateY(1px)}
+  .btn.primary{background:linear-gradient(180deg, #f9c74f, #f7b500); color:#111; font-weight:700; border:none}
+  .btn.danger{background:linear-gradient(180deg, #ef4444, #b91c1c); color:#fff; border:none}
+  .btn.ok{background:linear-gradient(180deg, #22c55e, #15803d); color:#fff; border:none}
+  input, select{
+    background:rgba(255,255,255,.06); color:#e6edf5; border:1px solid rgba(255,255,255,.1);
+    border-radius:10px; padding:10px 12px; outline:none; width:100%;
+  }
+  input:focus, select:focus{box-shadow:var(--ring)}
+  .flex{display:flex; gap:10px; align-items:center}
+  .between{display:flex; align-items:center; justify-content:space-between; gap:12px}
+  .muted{color:#9aa4b2}
+  .badge{padding:4px 8px; border-radius:999px; background:rgba(255,255,255,.08); font-size:12px}
+  .right{justify-content:flex-end}
+  .list{display:grid; gap:8px}
+  .list-item{display:flex; gap:10px; align-items:center; justify-content:space-between; padding:10px; border-radius:12px;
+    background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.06)}
+  .circle{width:12px;height:12px;border-radius:999px;background:var(--accent); box-shadow:0 0 16px rgba(247,181,0,.7)}
+  .display{
+    position:relative; aspect-ratio:1/1; width:min(80vmin, 560px); margin:auto; border-radius:50%;
+    background:conic-gradient(from 270deg, var(--accent) var(--p,0%), rgba(255,255,255,.08) 0);
+    box-shadow:inset 0 0 32px rgba(0,0,0,.5), 0 20px 60px rgba(0,0,0,.6);
+  }
+  .display .inner{
+    position:absolute; inset:18px; border-radius:50%;
+    background:radial-gradient(120px 120px at 30% 30%, rgba(255,255,255,.08), transparent),
+               linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+    display:flex; align-items:center; justify-content:center; flex-direction:column; text-align:center;
+    border:1px solid rgba(255,255,255,.08);
+  }
+  .time{font-size:64px; font-weight:800; letter-spacing:1px}
+  .label{margin-top:6px; color:#b9c2cf}
+  .kbd{border:1px solid rgba(255,255,255,.2); background:rgba(0,0,0,.4); padding:2px 8px; border-radius:6px; font-size:12px}
+  footer.shortcuts{
+    position:fixed; left:50%; transform:translateX(-50%); bottom:16px; background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.12); border-radius:999px; padding:10px 14px; display:flex; gap:10px; align-items:center;
+    backdrop-filter:blur(6px)
+  }
+  .focus-active .container::after{
+    content:""; position:fixed; inset:0; background:radial-gradient(60% 40% at 50% 20%, rgba(0,0,0,.2), rgba(0,0,0,.65));
+    pointer-events:none; transition:opacity .4s ease; z-index:0;
+  }
+  .visually-hidden{position:absolute!important;height:1px; width:1px; overflow:hidden; clip:rect(1px,1px,1px,1px)}
+  @media (max-width: 980px){
+    .row{grid-template-columns:1fr; padding-bottom:90px}
+    footer.shortcuts{bottom:8px; font-size:12px}
+  }
+</style>
+</head>
+<body>
+<div class="container" id="app" role="application" aria-label="Focus Timer by Talha">
+  <header class="between" aria-label="Top bar">
+    <div class="brand">
+      <div class="btn ok" id="installBtn" title="Install PWA" aria-label="Install">+</div>
+      <div>
+        <div class="muted" style="font-size:12px;letter-spacing:.2px">FOCUS TIMER</div>
+        <div style="font-weight:800">by Talha</div>
+      </div>
+    </div>
+    <div class="flex right">
+      <div class="pill"><span class="green-dot"></span> <span id="focusStateTxt">Focus idle</span></div>
+      <div class="pill">⭐ Coins: <span id="coinCount">0</span></div>
+    </div>
+  </header>
+
+  <nav role="tablist" aria-label="Primary">
+    <button class="tab" role="tab" aria-selected="true" data-tab="timer">Timer</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="stopwatch">Stopwatch</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="clock">Clock</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="alarm">Alarm</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="ambient">Ambient</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="sleep">Sleep</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="settings">Settings</button>
+  </nav>
+
+  <div class="row" id="layout">
+    <!-- Left -->
+    <section class="card" id="leftPane" aria-live="polite">
+      <!-- Timer display by default -->
+      <div id="timerView" class="grid">
+        <h2>Focus Timer</h2>
+        <div class="display" aria-label="Timer display"><div class="inner">
+          <div class="time" id="timerTime">25:00</div>
+          <div class="label" id="timerLabel">Pomodoro session</div>
+          <div class="flex" style="margin-top:16px;gap:12px">
+            <button class="btn primary" id="timerStartStop" aria-label="Start or Pause">Start</button>
+            <button class="btn" id="timerReset" aria-label="Reset">Reset</button>
+            <label class="flex" style="gap:6px;cursor:pointer"><input type="checkbox" id="focusModeChk"/> Focus Mode</label>
+          </div>
+        </div></div>
+      </div>
+
+      <div id="stopwatchView" class="grid" hidden>
+        <h2>Stopwatch</h2>
+        <div class="display"><div class="inner">
+          <div class="time" id="swTime">00:00.00</div>
+          <div class="flex" style="margin-top:16px">
+            <button class="btn primary" id="swStartStop">Start</button>
+            <button class="btn" id="swLap">Lap</button>
+            <button class="btn" id="swReset">Reset</button>
+          </div>
+        </div></div>
+        <div>
+          <h3 style="margin:12px 0 6px">Laps</h3>
+          <div id="lapList" class="list" aria-live="polite"></div>
+        </div>
+      </div>
+
+      <div id="clockView" class="grid" hidden>
+        <h2>Clock</h2>
+        <div class="display"><div class="inner">
+          <div class="time" id="clockTime">--:--:--</div>
+          <div class="label" id="clockDate"></div>
+        </div></div>
+      </div>
+
+      <div id="alarmView" class="grid" hidden>
+        <h2>Alarms</h2>
+        <div class="grid">
+          <div class="flex">
+            <input id="alarmLabel" placeholder="Alarm label (e.g., Wake up)" />
+            <input id="alarmTime" type="time" />
+            <select id="alarmTone"></select>
+            <button class="btn primary" id="addAlarm">Add</button>
+          </div>
+          <div class="flex" style="flex-wrap:wrap">
+            <label class="badge"><input type="checkbox" data-d="0" class="repeatDay"> Sun</label>
+            <label class="badge"><input type="checkbox" data-d="1" class="repeatDay"> Mon</label>
+            <label class="badge"><input type="checkbox" data-d="2" class="repeatDay"> Tue</label>
+            <label class="badge"><input type="checkbox" data-d="3" class="repeatDay"> Wed</label>
+            <label class="badge"><input type="checkbox" data-d="4" class="repeatDay"> Thu</label>
+            <label class="badge"><input type="checkbox" data-d="5" class="repeatDay"> Fri</label>
+            <label class="badge"><input type="checkbox" data-d="6" class="repeatDay"> Sat</label>
+            <label class="badge"><input type="checkbox" id="repeatWeekly"> Repeat weekly</label>
+          </div>
+          <div class="list" id="alarmList" aria-live="polite"></div>
+        </div>
+      </div>
+
+      <div id="ambientView" class="grid" hidden>
+        <h2>Ambient Sounds</h2>
+        <div class="list">
+          <div class="list-item">
+            <div class="flex"><div class="circle"></div><div>White Noise</div></div>
+            <div class="flex">
+              <input type="range" min="0" max="1" step="0.01" id="volWhite" style="width:160px">
+              <button class="btn" data-play="white">Play/Pause</button>
+            </div>
+          </div>
+          <div class="list-item">
+            <div class="flex"><div class="circle"></div><div>Rain</div></div>
+            <div class="flex">
+              <input type="range" min="0" max="1" step="0.01" id="volRain" style="width:160px">
+              <button class="btn" data-play="rain">Play/Pause</button>
+            </div>
+          </div>
+          <div class="list-item">
+            <div class="flex"><div class="circle"></div><div>Lo-fi</div></div>
+            <div class="flex">
+              <input type="range" min="0" max="1" step="0.01" id="volLofi" style="width:160px">
+              <button class="btn" data-play="lofi">Play/Pause</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="sleepView" class="grid" hidden>
+        <h2>Sleep</h2>
+        <div class="between">
+          <div class="flex">
+            <button class="btn ok" id="sleepStart">Start Sleep</button>
+            <button class="btn" id="sleepStop">Wake</button>
+            <span class="badge">Snoozes today: <span id="snoozeCount">0</span></span>
+          </div>
+          <div class="muted">We’ll log start/wake and show a simple chart.</div>
+        </div>
+        <canvas id="sleepChart" height="200" aria-label="Sleep chart"></canvas>
+        <div id="sleepLogs" class="list"></div>
+      </div>
+
+      <div id="settingsView" class="grid" hidden>
+        <h2>Settings & Permissions</h2>
+        <div class="list">
+          <div class="list-item">
+            <div>
+              <div>Notifications</div>
+              <div class="muted" style="font-size:13px">Used for alarms and timer completion alerts.</div>
+            </div>
+            <button class="btn" id="askNotify">Request</button>
+          </div>
+          <div class="list-item">
+            <div>
+              <div>Wake Lock (Screen)</div>
+              <div class="muted" style="font-size:13px">Keeps screen awake during focus.</div>
+            </div>
+            <button class="btn" id="tryWake">Try enable</button>
+          </div>
+          <div class="list-item">
+            <div>
+              <div>Upload Custom Ringtone</div>
+              <div class="muted" style="font-size:13px">MP3/OGG short file recommended.</div>
+            </div>
+            <input type="file" id="toneUpload" accept="audio/*"/>
+          </div>
+          <div class="list-item">
+            <div>
+              <div>Data</div>
+              <div class="muted" style="font-size:13px">Local-only: stored in your browser.</div>
+            </div>
+            <div class="flex">
+              <button class="btn danger" id="clearData">Clear All</button>
+              <span class="badge">Version: 1.0 single-file</span>
+            </div>
+          </div>
+          <div class="muted" style="font-size:13px">
+            Note: Background/closed-app alarms are limited on the open web. For guaranteed background alarms, use a native wrapper/TWA.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right -->
+    <aside class="card grid" id="rightPane">
+      <div class="between">
+        <h2>My Timers</h2>
+        <div class="muted">Run multiple together</div>
+      </div>
+      <div class="grid">
+        <div class="flex">
+          <input id="newTimerLabel" placeholder="Label (e.g., Pomodoro)" />
+          <input id="newTimerMin" type="number" min="1" max="999" value="25" style="max-width:120px"/>
+          <button class="btn primary" id="addTimer">Add</button>
+        </div>
+        <div id="timerList" class="list" aria-live="polite"></div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<footer class="shortcuts" aria-label="Keyboard shortcuts">
+  <span class="kbd">Space</span> Start/Pause
+  <span class="kbd">R</span> Reset
+  <span class="kbd">F</span> Fullscreen
+  <span class="kbd">N</span> New timer
+</footer>
+
+<!-- ====== Audio assets (embedded base64) ====== -->
+<audio id="tone-default" preload="auto"></audio>
+<audio id="tone1" preload="auto" src="data:audio/mp3;base64,//uQZAAAAAAAAAAAAAAAAAAAA..."></audio>
+<audio id="tone2" preload="auto" src="data:audio/mp3;base64,//uQZAAAAAAAAAAAAA..."></audio>
+<audio id="tone3" preload="auto" src="data:audio/mp3;base64,//uQZAAAAAAAAAAAAA..."></audio>
+<audio id="tone4" preload="auto" src="data:audio/mp3;base64,//uQZAAAAAAAAAAAAA..."></audio>
+<audio id="tone5" preload="auto" src="data:audio/mp3;base64,//uQZAAAAAAAAAAAAA..."></audio>
+<audio id="tone6" preload="auto" src="data:audio/mp3;base64,//uQZAAAAAAAAAAAAA..."></audio>
+
+<!-- Ambient (generated via WebAudio where possible; rain/lofi are simple loops) -->
+<audio id="amb-rain" loop preload="auto" src="data:audio/ogg;base64,T2dnUwACAAAAAAAAAAD..."></audio>
+<audio id="amb-lofi" loop preload="auto" src="data:audio/ogg;base64,T2dnUwACAAAAAAAAAAD..."></audio>
+
+<script>
+/*  ========= Focus Timer by Talha — Single-file App =========
+    Local-only persistence (localStorage). Optional PWA via dynamic manifest + SW Blob.
+    NOTE: Base64 audio placeholders above are shortened for brevity. Replace with your own small tones if desired.
+*/
+
+// ---------- Utilities ----------
+const $ = sel => document.querySelector(sel);
+const $$ = sel => Array.from(document.querySelectorAll(sel));
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+const fmt = n => String(n).padStart(2,'0');
+const now = () => new Date().getTime();
+const store = {
+  get(k, d){ try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
+  set(k, v){ localStorage.setItem(k, JSON.stringify(v)); },
+  del(k){ localStorage.removeItem(k); }
+};
+const playTone = async (id, vol=1) => {
+  const el = document.getElementById(id) || document.getElementById('tone1');
+  el.volume = vol;
+  try { await el.play(); } catch {}
+};
+const notify = async (title, body, actions=[]) => {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'granted') {
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (reg) {
+      reg.showNotification(title, {
+        body, tag: 'focus-timer',
+        icon: manifestIcons.small,
+        badge: manifestIcons.badge,
+        actions
+      });
+    } else {
+      new Notification(title, { body });
+    }
+  }
+};
+
+// ---------- State ----------
+let coins = store.get('coins', 0);
+let timers = store.get('timers', [
+  { id: crypto.randomUUID(), label:'Pomodoro', minutes:25, remaining:25*60, running:false, startedAt:0 }
+]);
+let alarms = store.get('alarms', []); // {id,label,time:"HH:MM",tone,days:[],repeatWeekly:boolean,enabled:true}
+let laps = []; // for stopwatch
+let sleepLogs = store.get('sleepLogs', []); // {start,end}
+let snoozeCount = store.get('snoozeCount', 0);
+let focusActive = false;
+let wakeLock = null;
+
+// ---------- UI Binding ----------
+const coinEl = $('#coinCount'); coinEl.textContent = coins;
+const timerListEl = $('#timerList');
+const timerTimeEl = $('#timerTime');
+const timerLabelEl = $('#timerLabel');
+const timerStartStopBtn = $('#timerStartStop');
+const timerResetBtn = $('#timerReset');
+const focusChk = $('#focusModeChk');
+const focusStateTxt = $('#focusStateTxt');
+
+let currentTimerId = timers[0]?.id;
+
+function renderTimers(){
+  timerListEl.innerHTML = '';
+  timers.forEach(t=>{
+    const row = document.createElement('div'); row.className='list-item';
+    row.innerHTML = `
+      <div class="flex" style="gap:10px">
+        <div class="circle"></div>
+        <div>
+          <div style="font-weight:700">${t.label}</div>
+          <div class="muted" style="font-size:12px">${t.minutes} min</div>
+        </div>
+      </div>
+      <div class="flex">
+        <button class="btn ${currentTimerId===t.id?'ok':''}" aria-label="Select timer" data-sel="${t.id}">Open</button>
+        <button class="btn" data-run="${t.id}">${t.running?'Pause':'Start'}</button>
+        <button class="btn" data-reset="${t.id}">Reset</button>
+        <button class="btn danger" data-del="${t.id}">Delete</button>
+      </div>`;
+    timerListEl.appendChild(row);
+  });
+  store.set('timers', timers);
+}
+renderTimers();
+
+function setActiveTimer(id){
+  const t = timers.find(x=>x.id===id); if(!t) return;
+  currentTimerId = id;
+  timerLabelEl.textContent = t.label;
+  updateTimerDisplay(t);
+  renderTimers();
+}
+
+function updateTimerDisplay(t){
+  const remain = t.remaining ?? t.minutes*60;
+  const m = Math.floor(remain/60), s = remain%60;
+  timerTimeEl.textContent = `${fmt(m)}:${fmt(s)}`;
+  const perc = 100 - Math.floor((remain / (t.minutes*60))*100);
+  document.querySelector('.display').style.setProperty('--p', perc + '%');
+}
+
+// Add new timer
+$('#addTimer').addEventListener('click', ()=>{
+  const label = $('#newTimerLabel').value.trim() || 'Custom';
+  const minutes = Math.max(1, parseInt($('#newTimerMin').value||'25',10));
+  const t = { id: crypto.randomUUID(), label, minutes, remaining:minutes*60, running:false, startedAt:0 };
+  timers.push(t);
+  renderTimers();
+  setActiveTimer(t.id);
+  $('#newTimerLabel').value='';
+});
+
+// Timer list actions
+timerListEl.addEventListener('click', (e)=>{
+  const btn = e.target.closest('button'); if(!btn) return;
+  const sel = btn.dataset.sel, run = btn.dataset.run, reset = btn.dataset.reset, del = btn.dataset.del;
+  if (sel) setActiveTimer(sel);
+  if (run){ const t = timers.find(x=>x.id===run); t.running ? pauseTimer(t.id) : startTimer(t.id); renderTimers(); }
+  if (reset){ const t = timers.find(x=>x.id===reset); resetTimer(t.id); renderTimers(); }
+  if (del){ timers = timers.filter(x=>x.id!==del); if(currentTimerId===del) currentTimerId = timers[0]?.id; renderTimers(); store.set('timers', timers); }
+});
+
+// Primary big controls
+timerStartStopBtn.addEventListener('click', ()=>{
+  const t = timers.find(x=>x.id===currentTimerId); if(!t) return;
+  t.running ? pauseTimer(t.id) : startTimer(t.id);
+  renderTimers();
+});
+timerResetBtn.addEventListener('click', ()=>{ const t = timers.find(x=>x.id===currentTimerId); if(t){ resetTimer(t.id); renderTimers(); }});
+
+// Timer engine (supports concurrent timers)
+let ticker = null;
+function ensureTicker(){
+  if (ticker) return;
+  ticker = setInterval(()=>{
+    const n = now();
+    let changed = false;
+    for (const t of timers){
+      if (!t.running) continue;
+      const delta = Math.floor((n - t.startedAt)/1000);
+      const newRemain = Math.max(0, t.remainingAtStart - delta);
+      if (newRemain !== t.remaining){ t.remaining = newRemain; changed = true; }
+      if (t.remaining === 0 && t.running){
+        t.running = false;
+        coins += 1; store.set('coins', coins); coinEl.textContent = coins;
+        playTone($('#alarmTone').value || 'tone1', 1);
+        notify('Timer done', `${t.label} completed!`, [{action:'snooze', title:'Snooze 5m'},{action:'dismiss',title:'Dismiss'}]);
+      }
+      if (t.id===currentTimerId) updateTimerDisplay(t);
+    }
+    if (changed) store.set('timers', timers);
+  }, 250);
+}
+function startTimer(id){
+  const t = timers.find(x=>x.id===id); if(!t) return;
+  t.running = true; t.startedAt = now(); t.remainingAtStart = t.remaining ?? t.minutes*60;
+  ensureTicker();
+}
+function pauseTimer(id){
+  const t = timers.find(x=>x.id===id); if(!t) return;
+  t.running = false; t.remaining = t.remaining ?? t.minutes*60;
+  store.set('timers', timers);
+}
+function resetTimer(id){
+  const t = timers.find(x=>x.id===id); if(!t) return;
+  t.running = false; t.remaining = t.minutes*60;
+  updateTimerDisplay(t); store.set('timers', timers);
+}
+setActiveTimer(currentTimerId);
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (ev)=>{
+  if (ev.target.closest('input,select,textarea')) return;
+  if (ev.code==='Space'){ ev.preventDefault(); timerStartStopBtn.click(); }
+  if (ev.key==='r' || ev.key==='R') timerResetBtn.click();
+  if (ev.key==='n' || ev.key==='N') $('#addTimer').click();
+  if (ev.key==='f' || ev.key==='F') toggleFullscreen();
+});
+
+function toggleFullscreen(){
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
+  else document.exitFullscreen?.();
+}
+
+// Focus Mode + Wake Lock
+focusChk.addEventListener('change', async (e)=>{
+  focusActive = e.target.checked;
+  document.body.classList.toggle('focus-active', focusActive);
+  focusStateTxt.textContent = focusActive ? 'Focus active' : 'Focus idle';
+  if (focusActive){
+    try { wakeLock = await navigator.wakeLock.request('screen'); } catch {}
+  } else {
+    try { await wakeLock?.release(); } catch {}
+    wakeLock = null;
+  }
+});
+
+// ---------- Stopwatch ----------
+let swRunning=false, swStart=0, swElapsed=0;
+const swTimeEl = $('#swTime');
+const lapList = $('#lapList');
+function renderSW(){
+  const ms = swRunning ? (now()-swStart)+swElapsed : swElapsed;
+  const cs = Math.floor(ms/10)%100;
+  const s = Math.floor(ms/1000)%60;
+  const m = Math.floor(ms/60000);
+  swTimeEl.textContent = `${fmt(m)}:${fmt(s)}.${fmt(cs)}`;
+  requestAnimationFrame(renderSW);
+}
+renderSW();
+$('#swStartStop').addEventListener('click', ()=>{
+  if (!swRunning){ swStart = now(); swRunning = true; $('#swStartStop').textContent='Pause'; }
+  else { swElapsed += now()-swStart; swRunning=false; $('#swStartStop').textContent='Start'; }
+});
+$('#swReset').addEventListener('click', ()=>{ swRunning=false; swElapsed=0; laps=[]; lapList.innerHTML=''; $('#swStartStop').textContent='Start'; });
+$('#swLap').addEventListener('click', ()=>{
+  const ms = swRunning ? (now()-swStart)+swElapsed : swElapsed;
+  laps.push(ms);
+  const item = document.createElement('div'); item.className='list-item';
+  const mins = Math.floor(ms/60000), secs = Math.floor(ms/1000)%60, cs = Math.floor(ms/10)%100;
+  item.textContent = `Lap ${laps.length}: ${fmt(mins)}:${fmt(secs)}.${fmt(cs)}`;
+  lapList.prepend(item);
+});
+
+// ---------- Clock ----------
+function renderClock(){
+  const d = new Date();
+  $('#clockTime').textContent = d.toLocaleTimeString();
+  $('#clockDate').textContent = d.toLocaleDateString(undefined,{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  setTimeout(renderClock, 1000);
+}
+renderClock();
+
+// ---------- Alarms ----------
+const alarmSelect = $('#alarmTone');
+const builtInTones = ['tone1','tone2','tone3','tone4','tone5','tone6'];
+function loadToneOptions(){
+  alarmSelect.innerHTML='';
+  for (const id of builtInTones){
+    const opt=document.createElement('option'); opt.value=id; opt.textContent=id;
+    alarmSelect.appendChild(opt);
+  }
+  const custom = store.get('customTone', null);
+  if (custom){
+    const opt=document.createElement('option'); opt.value='tone-default'; opt.textContent='Custom Upload';
+    alarmSelect.appendChild(opt);
+    const el = $('#tone-default'); el.src = custom.data; el.load();
+  }
+}
+loadToneOptions();
+
+function renderAlarms(){
+  const list = $('#alarmList'); list.innerHTML='';
+  for (const a of alarms){
+    const row = document.createElement('div'); row.className='list-item';
+    row.innerHTML = `
+      <div>
+        <div style="font-weight:700">${a.label} — ${a.time}</div>
+        <div class="muted" style="font-size:12px">${a.enabled?'Enabled':'Disabled'} • ${a.tone}</div>
+      </div>
+      <div class="flex">
+        <button class="btn" data-toggle="${a.id}">${a.enabled?'Disable':'Enable'}</button>
+        <button class="btn" data-test="${a.id}">Test</button>
+        <button class="btn danger" data-del="${a.id}">Delete</button>
+      </div>`;
+    list.appendChild(row);
+  }
+  store.set('alarms', alarms);
+}
+renderAlarms();
+
+$('#addAlarm').addEventListener('click', ()=>{
+  const label = $('#alarmLabel').value.trim() || 'Alarm';
+  const time = $('#alarmTime').value || '07:00';
+  const tone = $('#alarmTone').value || 'tone1';
+  const days = $$('.repeatDay').filter(x=>x.checked).map(x=>+x.dataset.d);
+  const repeat = $('#repeatWeekly').checked;
+  alarms.push({id:crypto.randomUUID(),label,time,tone,days,repeatWeekly:repeat,enabled:true});
+  renderAlarms();
+});
+
+$('#alarmList').addEventListener('click',(e)=>{
+  const b=e.target.closest('button'); if(!b) return;
+  const id=b.dataset.del || b.dataset.toggle || b.dataset.test;
+  const a=alarms.find(x=>x.id===id); if(!a) return;
+  if (b.dataset.del){ alarms=alarms.filter(x=>x.id!==id); renderAlarms(); return; }
+  if (b.dataset.toggle){ a.enabled=!a.enabled; renderAlarms(); return; }
+  if (b.dataset.test){ triggerAlarm(a); }
+});
+
+function checkAlarmsLoop(){
+  const d=new Date();
+  const hh=fmt(d.getHours()), mm=fmt(d.getMinutes());
+  const day = d.getDay();
+  for (const a of alarms){
+    if (!a.enabled) continue;
+    if (a.days.length && !a.days.includes(day)) continue;
+    if (`${hh}:${mm}`===a.time){
+      triggerAlarm(a);
+      if (!a.repeatWeekly && a.days.length===0) a.enabled=false;
+    }
+  }
+  renderAlarms();
+  setTimeout(checkAlarmsLoop, 1000*20); // check every 20s
+}
+checkAlarmsLoop();
+
+async function triggerAlarm(a){
+  await playTone(a.tone, 1);
+  await notify('Alarm', a.label, [{action:'snooze', title:'Snooze 5m'}, {action:'dismiss', title:'Dismiss'}]);
+  // Simple modal fallback:
+  alert(`Alarm: ${a.label}`);
+}
+
+// Snooze handling from SW (see sw code) will postMessage back
+navigator.serviceWorker?.addEventListener?.('message', (e)=>{
+  if (e.data?.type==='SNOOZE'){
+    snoozeCount++; store.set('snoozeCount',snoozeCount); $('#snoozeCount').textContent=snoozeCount;
+    // make a quick 5 min timer
+    const t = { id: crypto.randomUUID(), label:'Snoozed Alarm', minutes:5, remaining:5*60, running:false, startedAt:0 };
+    timers.push(t); setActiveTimer(t.id); startTimer(t.id); renderTimers();
+  }
+});
+$('#snoozeCount').textContent = snoozeCount;
+
+// Custom ringtone upload
+$('#toneUpload').addEventListener('change', async (ev)=>{
+  const file = ev.target.files?.[0]; if(!file) return;
+  const buf = await file.arrayBuffer();
+  const b64 = `data:${file.type};base64,` + btoa(String.fromCharCode(...new Uint8Array(buf)));
+  store.set('customTone', {name:file.name, data:b64});
+  loadToneOptions();
+  alert('Custom ringtone added.');
+});
+
+// ---------- Ambient ----------
+const amb = {
+  white: null, // generated via WebAudio
+  rain: $('#amb-rain'),
+  lofi: $('#amb-lofi')
+};
+let audioCtx = null; let whiteNode = null;
+function ensureCtx(){ if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
+function toggleWhite(){
+  ensureCtx();
+  if (!whiteNode){
+    const node = audioCtx.createScriptProcessor(4096,1,1);
+    node.onaudioprocess = e=>{
+      const out=e.outputBuffer.getChannelData(0);
+      for(let i=0;i<out.length;i++) out[i]=Math.random()*2-1;
+    };
+    node.connect(audioCtx.destination);
+    whiteNode = node;
+  } else {
+    whiteNode.disconnect(); whiteNode = null;
+  }
+}
+$('#volWhite').addEventListener('input', e=>{
+  // volume for white noise is managed via gain on destination (simple hack: not precise in script node)
+});
+$('#volRain').addEventListener('input', e=> amb.rain.volume = +e.target.value);
+$('#volLofi').addEventListener('input', e=> amb.lofi.volume = +e.target.value);
+$$('[data-play]').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    const id=btn.dataset.play;
+    if (id==='white'){ toggleWhite(); return; }
+    const el = amb[id]; if (!el) return;
+    if (el.paused) el.play(); else el.pause();
+  });
+});
+
+// ---------- Sleep ----------
+$('#sleepStart').addEventListener('click', ()=>{
+  sleepLogs.push({start: Date.now(), end: null});
+  store.set('sleepLogs', sleepLogs); renderSleep();
+});
+$('#sleepStop').addEventListener('click', ()=>{
+  const last = [...sleepLogs].reverse().find(x=>!x.end);
+  if (last){ last.end=Date.now(); store.set('sleepLogs', sleepLogs); renderSleep(); }
+});
+
+function renderSleep(){
+  $('#sleepLogs').innerHTML='';
+  for (const s of [...sleepLogs].slice(-10).reverse()){
+    const row=document.createElement('div'); row.className='list-item';
+    const dur = s.end ? Math.round((s.end-s.start)/60000) : 0;
+    row.textContent = `${new Date(s.start).toLocaleString()}  →  ${s.end?new Date(s.end).toLocaleTimeString():'(sleeping...)'}  (${dur} min)`;
+    $('#sleepLogs').appendChild(row);
+  }
+  drawSleepChart();
+}
+function drawSleepChart(){
+  const c = $('#sleepChart'); const ctx = c.getContext('2d');
+  ctx.clearRect(0,0,c.width,c.height);
+  const logs = sleepLogs.filter(x=>x.end);
+  const w = c.width, h = c.height, pad=24;
+  ctx.strokeStyle = 'rgba(255,255,255,.2)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(pad, h-pad); ctx.lineTo(w-pad, h-pad); ctx.stroke();
+  const maxMins = Math.max(1, ...logs.map(x=>Math.round((x.end-x.start)/60000)));
+  const stepX = (w-2*pad) / Math.max(1, logs.length-1);
+  ctx.beginPath(); ctx.lineWidth=2; ctx.strokeStyle='#f7b500';
+  logs.forEach((x,i)=>{
+    const mins=Math.round((x.end-x.start)/60000);
+    const y = h-pad - (mins/maxMins)*(h-2*pad);
+    const xPos = pad + i*stepX;
+    i?ctx.lineTo(xPos,y):ctx.moveTo(xPos,y);
+    ctx.fillStyle='rgba(247,181,0,.8)'; ctx.beginPath(); ctx.arc(xPos,y,3,0,Math.PI*2); ctx.fill();
+  });
+  ctx.stroke();
+}
+renderSleep();
+
+// ---------- Tabs ----------
+const views = {
+  timer: $('#timerView'),
+  stopwatch: $('#stopwatchView'),
+  clock: $('#clockView'),
+  alarm: $('#alarmView'),
+  ambient: $('#ambientView'),
+  sleep: $('#sleepView'),
+  settings: $('#settingsView')
+};
+$$('nav .tab').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    $$('nav .tab').forEach(b=>b.setAttribute('aria-selected','false'));
+    btn.setAttribute('aria-selected','true');
+    Object.values(views).forEach(v=>v.hidden=true);
+    views[btn.dataset.tab].hidden=false;
+  });
+});
+
+// ---------- Permissions ----------
+$('#askNotify').addEventListener('click', async ()=>{
+  if (!('Notification' in window)) return alert('Notifications not supported.');
+  const p = await Notification.requestPermission();
+  alert('Permission: ' + p);
+});
+$('#tryWake').addEventListener('click', async ()=>{
+  try { wakeLock = await navigator.wakeLock.request('screen'); alert('Wake lock held'); }
+  catch { alert('Wake lock failed (browser may not support)'); }
+});
+
+// Clear data
+$('#clearData').addEventListener('click', ()=>{
+  if (!confirm('Clear all local data?')) return;
+  localStorage.clear(); location.reload();
+});
+
+// ---------- Install / PWA (single-file trick) ----------
+const manifestIcons = {
+  small: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAAB...==',
+  large: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAYAAAB...==',
+  badge: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAAAQCAYAAAB...==',
+};
+const manifest = {
+  name: "Focus Timer by Talha",
+  short_name: "Focus Timer",
+  theme_color: "#0b0f14",
+  background_color: "#0b0f14",
+  display: "standalone",
+  start_url: ".",
+  icons: [
+    { src: manifestIcons.small, sizes:"192x192", type:"image/png" },
+    { src: manifestIcons.large, sizes:"512x512", type:"image/png" }
+  ]
+};
+// create manifest Blob and attach
+const manBlob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
+const manUrl = URL.createObjectURL(manBlob);
+document.getElementById('manifest-link').href = manUrl;
+
+// Inline Service Worker via Blob
+const swCode = `
+self.addEventListener('install', e=>{ self.skipWaiting(); });
+self.addEventListener('activate', e=>{ self.clients.claim(); });
+self.addEventListener('fetch', ()=>{}); // network passthrough (single-file)
+self.addEventListener('notificationclick', e=>{
+  e.notification.close();
+  if (e.action==='snooze'){
+    e.waitUntil((async ()=>{
+      const cs = await clients.matchAll({type:'window', includeUncontrolled:true});
+      cs.forEach(c=>c.postMessage({type:'SNOOZE'}));
+    })());
+  } else {
+    e.waitUntil(clients.openWindow('./'));
+  }
+});`;
+const swBlob = new Blob([swCode], {type:'text/javascript'});
+const swUrl = URL.createObjectURL(swBlob);
+if ('serviceWorker' in navigator){
+  navigator.serviceWorker.register(swUrl);
+}
+
+// install prompt
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e)=>{
+  e.preventDefault(); deferredPrompt = e; $('#installBtn').classList.add('primary');
+});
+$('#installBtn').addEventListener('click', async ()=>{
+  if (!deferredPrompt){ alert('If your browser supports install, a prompt will appear later.'); return; }
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  $('#installBtn').classList.remove('primary');
+});
+
+// ---------- Init ----------
+updateTimerDisplay(timers.find(x=>x.id===currentTimerId));
+
+ if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("service-worker.js")};
+</script>
+</body>
+</html>
+ 
