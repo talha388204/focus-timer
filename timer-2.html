@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Focus Timer by Talha — Single File</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        * { font-family: 'Inter', sans-serif; }
+        .glassmorphism { background: rgba(255,255,255,0.04); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.06); }
+        .gradient-bg { background: linear-gradient(135deg,#0f1724 0%, #2b1b5f 50%, #0f1724 100%); }
+        .timer-gradient { background: linear-gradient(135deg,#021124 0%, #064e9a 50%, #021124 100%); }
+        .stopwatch-gradient { background: linear-gradient(135deg,#052014 0%, #0ea5a4 50%, #052014 100%); }
+        .alarm-gradient { background: linear-gradient(135deg,#2b0500 0%, #d97706 50%, #2b0500 100%); }
+        .focus-gradient { background: linear-gradient(135deg,#120b24 0%, #7c3aed 50%, #120b24 100%); }
+        .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); align-items:center; justify-content:center; z-index:60; padding:1rem; }
+        .modal.show { display:flex; }
+        .view { display:none; min-height:100vh; }
+        .view.active { display:block; }
+        .day-btn.active{ background-color:#f97316; border-color:#f97316; color:white; }
+        /* small responsive */
+        @media (max-width:640px){ .w-64{ width: 16rem; } }
+    </style>
+</head>
+<body class="min-h-screen gradient-bg text-white">
+<div id="app">
+    <!-- Dashboard -->
+    <div id="dashboard" class="view active">
+        <div class="flex items-center justify-between p-6">
+            <div>
+                <h1 class="text-3xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">Focus Timer</h1>
+                <p class="text-gray-400 mt-1">by Talha</p>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="text-right">
+                    <div id="current-time" class="text-2xl font-mono text-white"></div>
+                    <div id="current-date" class="text-sm text-gray-400"></div>
+                </div>
+                <button onclick="alert('Settings feature coming soon!')" class="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg">
+                    <i data-lucide="settings" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="px-6 mb-6">
+            <div class="glassmorphism rounded-xl p-4 border-yellow-500/20">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-gradient-to-r from-yellow-400 to-orange-400 flex items-center justify-center">
+                            <span class="text-lg">🪙</span>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-300">Focus Coins</p>
+                            <p id="focus-coins" class="text-xl font-bold text-white">0</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs text-gray-400">Complete sessions</p>
+                        <p class="text-xs text-gray-400">to earn coins!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 px-6 mb-8">
+            <div class="glassmorphism rounded-xl p-6 cursor-pointer hover:bg-white/10 transition-all group" onclick="showView('timer')">
+                <div class="flex flex-col items-center text-center">
+                    <div class="w-16 h-16 rounded-2xl bg-gradient-to-r from-blue-500 to-cyan-500 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <i data-lucide="timer" class="w-8 h-8 text-white"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-white mb-1">Timer</h3>
+                    <p class="text-sm text-gray-400">Focus sessions</p>
+                </div>
+            </div>
+
+            <div class="glassmorphism rounded-xl p-6 cursor-pointer hover:bg-white/10 transition-all group" onclick="showView('stopwatch')">
+                <div class="flex flex-col items-center text-center">
+                    <div class="w-16 h-16 rounded-2xl bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <i data-lucide="clock" class="w-8 h-8 text-white"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-white mb-1">Stopwatch</h3>
+                    <p class="text-sm text-gray-400">Track time</p>
+                </div>
+            </div>
+
+            <div class="glassmorphism rounded-xl p-6 cursor-pointer hover:bg-white/10 transition-all group" onclick="showView('alarm')">
+                <div class="flex flex-col items-center text-center">
+                    <div class="w-16 h-16 rounded-2xl bg-gradient-to-r from-orange-500 to-red-500 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <i data-lucide="alarm-clock" class="w-8 h-8 text-white"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-white mb-1">Alarm</h3>
+                    <p class="text-sm text-gray-400">Wake up calls</p>
+                </div>
+            </div>
+
+            <div class="glassmorphism rounded-xl p-6 cursor-pointer hover:bg-white/10 transition-all group" onclick="showView('focus')">
+                <div class="flex flex-col items-center text-center">
+                    <div class="w-16 h-16 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <i data-lucide="target" class="w-8 h-8 text-white"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-white mb-1">Focus</h3>
+                    <p class="text-sm text-gray-400">Deep work mode</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="px-6">
+            <div class="glassmorphism rounded-xl p-6">
+                <h3 class="text-lg font-semibold text-white mb-4">Today's Progress</h3>
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="text-center">
+                        <div id="today-sessions" class="text-2xl font-bold text-blue-400">0</div>
+                        <div class="text-xs text-gray-400">Sessions</div>
+                    </div>
+                    <div class="text-center">
+                        <div id="today-focus-time" class="text-2xl font-bold text-green-400">0h</div>
+                        <div class="text-xs text-gray-400">Focus Time</div>
+                    </div>
+                    <div class="text-center">
+                        <div id="today-coins" class="text-2xl font-bold text-purple-400">0</div>
+                        <div class="text-xs text-gray-400">Coins Earned</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Timer view -->
+    <div id="timer" class="view timer-gradient p-6">
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-4">
+                <button onclick="showView('dashboard')" class="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg">
+                    <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                </button>
+                <div>
+                    <h1 class="text-2xl font-bold text-white">Timers</h1>
+                    <p class="text-gray-400">Focus sessions & productivity</p>
+                </div>
+            </div>
+            <button onclick="showCreateTimer()" class="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 px-4 py-2 rounded-lg flex items-center gap-2">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                New Timer
+            </button>
+        </div>
+
+        <div id="timers-list" class="space-y-4"></div>
+        <div id="timers-empty" class="text-center py-12">
+            <div class="text-6xl mb-4">⏱️</div>
+            <h3 class="text-xl font-semibold text-white mb-2">No timers yet</h3>
+            <p class="text-gray-400 mb-6">Create your first focus timer to get started</p>
+            <button onclick="showCreateTimer()" class="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 px-6 py-3 rounded-lg flex items-center gap-2 mx-auto">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                Create Timer
+            </button>
+        </div>
+    </div>
+
+    <!-- Stopwatch view -->
+    <div id="stopwatch" class="view stopwatch-gradient p-6">
+        <div class="flex items-center gap-4 mb-8">
+            <button onclick="showView('dashboard')" class="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg">
+                <i data-lucide="arrow-left" class="w-5 h-5"></i>
+            </button>
+            <div>
+                <h1 class="text-2xl font-bold text-white">Stopwatch</h1>
+                <p class="text-gray-400">Track your time precisely</p>
+            </div>
+        </div>
+
+        <div class="glassmorphism rounded-xl p-8 text-center mb-8">
+            <div id="stopwatch-time" class="text-6xl md:text-8xl font-mono font-bold text-white mb-8">00:00.00</div>
+            <div class="flex justify-center gap-4 flex-wrap">
+                <button id="stopwatch-start" onclick="startStopwatch()" class="bg-gradient-to-r from-green-500 to-emerald-500 px-8 py-3 rounded-lg flex items-center gap-2">
+                    <i data-lucide="play" class="w-5 h-5"></i> Start
+                </button>
+                <button id="stopwatch-pause" onclick="pauseStopwatch()" class="bg-gradient-to-r from-yellow-500 to-orange-500 px-8 py-3 rounded-lg flex items-center gap-2" style="display:none;">
+                    <i data-lucide="pause" class="w-5 h-5"></i> Pause
+                </button>
+                <button id="stopwatch-lap" onclick="addLap()" class="border border-white/20 text-white px-8 py-3 rounded-lg flex items-center gap-2" disabled>
+                    <i data-lucide="flag" class="w-5 h-5"></i> Lap
+                </button>
+                <button onclick="resetStopwatch()" class="border border-red-500/50 text-red-400 px-8 py-3 rounded-lg flex items-center gap-2">
+                    <i data-lucide="square" class="w-5 h-5"></i> Reset
+                </button>
+            </div>
+        </div>
+
+        <div id="laps-container" class="glassmorphism rounded-xl p-6" style="display:none;">
+            <h3 class="text-lg font-semibold text-white mb-4">Laps (<span id="lap-count">0</span>)</h3>
+            <div id="laps-list" class="space-y-2 max-h-64 overflow-y-auto"></div>
+        </div>
+    </div>
+
+    <!-- Alarm view -->
+    <div id="alarm" class="view alarm-gradient p-6">
+        <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-4">
+                <button onclick="showView('dashboard')" class="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg">
+                    <i data-lucide="arrow-left" class="w-5 h-5"></i>
+                </button>
+                <div>
+                    <h1 class="text-2xl font-bold text-white">Alarms</h1>
+                    <p class="text-gray-400">Wake up calls & reminders</p>
+                </div>
+            </div>
+            <button onclick="showCreateAlarm()" class="bg-gradient-to-r from-orange-500 to-red-500 px-4 py-2 rounded-lg flex items-center gap-2">
+                <i data-lucide="plus" class="w-4 h-4"></i> New Alarm
+            </button>
+        </div>
+
+        <div id="alarms-list" class="space-y-4"></div>
+        <div id="alarms-empty" class="text-center py-12">
+            <div class="text-6xl mb-4">⏰</div>
+            <h3 class="text-xl font-semibold text-white mb-2">No alarms set</h3>
+            <p class="text-gray-400 mb-6">Create your first alarm to get started</p>
+            <button onclick="showCreateAlarm()" class="bg-gradient-to-r from-orange-500 to-red-500 px-6 py-3 rounded-lg flex items-center gap-2 mx-auto">
+                <i data-lucide="plus" class="w-4 h-4"></i> Create Alarm
+            </button>
+        </div>
+    </div>
+
+    <!-- Focus view -->
+    <div id="focus" class="view focus-gradient p-6">
+        <div class="flex items-center gap-4 mb-8">
+            <button onclick="showView('dashboard')" class="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg">
+                <i data-lucide="arrow-left" class="w-5 h-5"></i>
+            </button>
+            <div>
+                <h1 class="text-2xl font-bold text-white">Focus Mode</h1>
+                <p class="text-gray-400">Deep work & concentration</p>
+            </div>
+        </div>
+
+        <div id="focus-status" class="mb-6" style="display:none;">
+            <div class="glassmorphism rounded-xl p-4 text-center border-purple-500/30">
+                <div class="flex items-center justify-center gap-2 mb-2">
+                    <i data-lucide="target" class="w-5 h-5 text-purple-400"></i>
+                    <span class="text-purple-400 font-semibold">Focus Active</span>
+                </div>
+                <p class="text-sm text-gray-300">Enable Do Not Disturb on your device for better focus</p>
+            </div>
+        </div>
+
+        <div class="glassmorphism rounded-xl p-8 text-center mb-8">
+            <div class="relative w-64 h-64 mx-auto mb-8">
+                <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="45" stroke="currentColor" stroke-width="2" fill="transparent" class="text-gray-700"></circle>
+                    <circle id="focus-progress-circle" cx="50" cy="50" r="45" stroke="currentColor" stroke-width="2" fill="transparent"
+                            stroke-dasharray="282.743" stroke-dashoffset="282.743" class="text-purple-400" stroke-linecap="round"></circle>
+                </svg>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <div class="text-center">
+                        <div id="focus-time" class="text-4xl font-mono font-bold text-white">25:00</div>
+                        <div class="text-sm text-gray-400 mt-1">25 min session</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-center gap-4 mb-6 flex-wrap">
+                <button id="focus-start" onclick="startFocus()" class="bg-gradient-to-r from-purple-500 to-pink-500 px-8 py-3 rounded-lg flex items-center gap-2">
+                    <i data-lucide="play" class="w-5 h-5"></i> Start Focus
+                </button>
+                <button id="focus-pause" onclick="pauseFocus()" class="bg-gradient-to-r from-yellow-500 to-orange-500 px-8 py-3 rounded-lg flex items-center gap-2" style="display:none;">
+                    <i data-lucide="pause" class="w-5 h-5"></i> Pause
+                </button>
+                <button onclick="resetFocus()" class="border border-white/20 text-white px-8 py-3 rounded-lg flex items-center gap-2">
+                    <i data-lucide="square" class="w-5 h-5"></i> Reset
+                </button>
+            </div>
+
+            <div id="focus-completed" class="text-center" style="display:none;">
+                <div class="text-2xl mb-2">🎉</div>
+                <p class="text-green-400 font-semibold">Focus session completed!</p>
+                <p class="text-sm text-gray-400">You earned <span id="focus-coins-earned">25</span> focus coins</p>
+            </div>
+        </div>
+
+        <div class="glassmorphism rounded-xl p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-white">Ambient Sounds</h3>
+                <button id="ambient-mute" onclick="toggleAmbientMute()" class="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg" title="Mute/Unmute">
+                    <i data-lucide="volume-2" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <select id="ambient-select" onchange="changeAmbientSound()" class="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2">
+                    <option value="">Choose ambient sound</option>
+                    <option value="rain">Rain</option>
+                    <option value="forest">Forest</option>
+                    <option value="ocean">Ocean Waves</option>
+                    <option value="cafe">Coffee Shop</option>
+                    <option value="white-noise">White Noise</option>
+                </select>
+
+                <div id="ambient-volume-control" class="space-y-2" style="display:none;">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-gray-300">Volume</span>
+                        <span id="ambient-volume-display" class="text-sm text-gray-400">50%</span>
+                    </div>
+                    <input type="range" id="ambient-volume" min="0" max="100" value="50" onchange="changeAmbientVolume()" class="w-full">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Timer Modal -->
+<div id="create-timer-modal" class="modal">
+    <div class="glassmorphism rounded-xl p-6 max-w-md w-full mx-4">
+        <h2 class="text-xl font-bold text-white mb-4">Create New Timer</h2>
+        <div class="space-y-4">
+            <div>
+                <label class="text-sm text-gray-300 block mb-2">Timer Name</label>
+                <input type="text" id="new-timer-name" placeholder="e.g., Deep Work Session" class="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2">
+            </div>
+            <div>
+                <label class="text-sm text-gray-300 block mb-2">Duration (minutes)</label>
+                <input type="number" id="new-timer-duration" value="25" min="1" max="180" class="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2">
+            </div>
+            <div class="flex gap-2 pt-4">
+                <button onclick="createTimer()" class="flex-1 bg-gradient-to-r from-blue-500 to-cyan-500 px-4 py-2 rounded-lg">Create Timer</button>
+                <button onclick="hideCreateTimer()" class="text-gray-400 hover:text-white hover:bg-white/10 px-4 py-2 rounded-lg">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Alarm Modal -->
+<div id="create-alarm-modal" class="modal">
+    <div class="glassmorphism rounded-xl p-6 max-w-md w-full mx-4">
+        <h2 class="text-xl font-bold text-white mb-4">Create New Alarm</h2>
+        <div class="space-y-6">
+            <div>
+                <label class="text-sm text-gray-300 block mb-2">Time</label>
+                <input type="time" id="new-alarm-time" value="07:00" class="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2 text-2xl font-mono text-center">
+            </div>
+            <div>
+                <label class="text-sm text-gray-300 block mb-2">Label</label>
+                <input type="text" id="new-alarm-label" placeholder="e.g., Morning Workout" class="w-full bg-slate-700 border border-slate-600 text-white rounded-lg px-3 py-2">
+            </div>
+            <div>
+                <label class="text-sm text-gray-300 block mb-2">Repeat</label>
+                <div class="grid grid-cols-7 gap-2" id="day-buttons">
+                    <button type="button" class="day-btn h-10 border border-slate-600 text-gray-300 hover:bg-slate-700 rounded text-sm" data-day="0">Sun</button>
+                    <button type="button" class="day-btn h-10 border border-slate-600 text-gray-300 hover:bg-slate-700 rounded text-sm" data-day="1">Mon</button>
+                    <button type="button" class="day-btn h-10 border border-slate-600 text-gray-300 hover:bg-slate-700 rounded text-sm" data-day="2">Tue</button>
+                    <button type="button" class="day-btn h-10 border border-slate-600 text-gray-300 hover:bg-slate-700 rounded text-sm" data-day="3">Wed</button>
+                    <button type="button" class="day-btn h-10 border border-slate-600 text-gray-300 hover:bg-slate-700 rounded text-sm" data-day="4">Thu</button>
+                    <button type="button" class="day-btn h-10 border border-slate-600 text-gray-300 hover:bg-slate-700 rounded text-sm" data-day="5">Fri</button>
+                    <button type="button" class="day-btn h-10 border border-slate-600 text-gray-300 hover:bg-slate-700 rounded text-sm" data-day="6">Sat</button>
+                </div>
+                <p class="text-xs text-gray-400 mt-1">Leave empty for one-time alarm</p>
+            </div>
+            <div class="flex gap-2 pt-4">
+                <button onclick="createAlarm()" class="flex-1 bg-gradient-to-r from-orange-500 to-red-500 px-4 py-2 rounded-lg">Create Alarm</button>
+                <button onclick="hideCreateAlarm()" class="text-gray-400 hover:text-white hover:bg-white/10 px-4 py-2 rounded-lg">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+/* ========= Icons init ========= */
+lucide.createIcons();
+
+/* ========= App state & persistence ========= */
+let timers = JSON.parse(localStorage.getItem('focusTimers') || '[]');
+let alarms = JSON.parse(localStorage.getItem('focusAlarms') || '[]');
+let focusCoins = parseInt(localStorage.getItem('focusCoins') || '0');
+let todayStats = JSON.parse(localStorage.getItem('todayStats') || '{"sessions":0,"focusTime":0,"coins":0,"date":""}');
+let stopwatchTime = 0, stopwatchInterval = null, stopwatchRunning = false, laps = [];
+let focusTime = 25*60, focusRemainingTime = focusTime, focusInterval = null, focusRunning = false;
+let timerIntervals = {};
+let audioCtx = null;
+let ambientNodes = {}; // store ambient sources/gains
+let ambientMuted = false;
+
+/* ========= Helpers ========= */
+function saveAll() {
+    localStorage.setItem('focusTimers', JSON.stringify(timers));
+    localStorage.setItem('focusAlarms', JSON.stringify(alarms));
+    localStorage.setItem('focusCoins', String(focusCoins));
+    localStorage.setItem('todayStats', JSON.stringify(todayStats));
+}
+function formatTime(seconds) {
+    const mins = Math.floor(seconds/60), secs = seconds%60;
+    return `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+}
+function formatStopwatchTime(ms) {
+    const totalSeconds = Math.floor(ms/1000), minutes = Math.floor(totalSeconds/60), seconds = totalSeconds%60, ms2 = Math.floor((ms%1000)/10);
+    return `${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}.${String(ms2).padStart(2,'0')}`;
+}
+function ensureAudioCtx() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+}
+
+/* ========= Clock & UI updates ========= */
+function updateTimeDisplay() {
+    const now = new Date();
+    document.getElementById('current-time').textContent = now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',hour12:false});
+    document.getElementById('current-date').textContent = now.toLocaleDateString('en-GB',{weekday:'short',month:'short',day:'numeric'});
+}
+setInterval(updateTimeDisplay, 1000);
+updateTimeDisplay();
+
+function updateFocusCoinsUI(){ document.getElementById('focus-coins').textContent = focusCoins; }
+function updateTodayStatsUI(){
+    const today = new Date().toDateString();
+    if (todayStats.date !== today) {
+        todayStats = {sessions:0,focusTime:0,coins:0,date:today};
+        saveAll();
+    }
+    document.getElementById('today-sessions').textContent = todayStats.sessions;
+    document.getElementById('today-focus-time').textContent = Math.floor(todayStats.focusTime/3600)+'h';
+    document.getElementById('today-coins').textContent = todayStats.coins;
+}
+updateFocusCoinsUI();
+updateTodayStatsUI();
+
+/* ========= View switching ========= */
+function showView(name) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById(name).classList.add('active');
+    lucide.createIcons();
+}
+showView('dashboard');
+
+/* ========= Timers (create / start / stop / delete) ========= */
+function renderTimers() {
+    const list = document.getElementById('timers-list');
+    list.innerHTML = '';
+    if (!timers.length) {
+        document.getElementById('timers-empty').style.display = 'block';
+        return;
+    }
+    document.getElementById('timers-empty').style.display = 'none';
+    timers.forEach((t, idx) => {
+        const card = document.createElement('div');
+        card.className = 'glassmorphism rounded-xl p-4 flex items-center justify-between';
+        card.innerHTML = `
+            <div>
+                <div class="font-semibold text-white">${escapeHtml(t.name)}</div>
+                <div class="text-xs text-gray-400 mt-1">${formatTime(t.duration)}</div>
+            </div>
+            <div class="flex items-center gap-2">
+                <div id="timer-remaining-${t.id}" class="text-mono font-mono text-white mr-4">${formatTime(t.remaining)}</div>
+                <button class="px-3 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white" id="timer-start-${t.id}">${t.running ? 'Pause' : 'Start'}</button>
+                <button class="px-3 py-2 rounded border border-white/20 text-white" id="timer-del-${t.id}">Delete</button>
+            </div>
+        `;
+        list.appendChild(card);
+
+        document.getElementById(`timer-start-${t.id}`).onclick = () => toggleTimer(t.id);
+        document.getElementById(`timer-del-${t.id}`).onclick = () => { deleteTimer(t.id); };
+    });
+}
+function escapeHtml(str){ return String(str||'').replace(/[&<>"']/g, s=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[s]); }
+
+function showCreateTimer(){ document.getElementById('create-timer-modal').classList.add('show'); }
+function hideCreateTimer(){ document.getElementById('create-timer-modal').classList.remove('show'); }
+
+function createTimer(){
+    const name = document.getElementById('new-timer-name').value.trim() || 'Timer';
+    const minutes = parseInt(document.getElementById('new-timer-duration').value) || 25;
+    const id = 't'+Date.now();
+    const t = { id, name, duration: minutes*60, remaining: minutes*60, running:false };
+    timers.push(t);
+    saveAll();
+    renderTimers();
+    hideCreateTimer();
+}
+
+function toggleTimer(id) {
+    const t = timers.find(x=>x.id===id);
+    if (!t) return;
+    if (t.running) { // pause
+        clearInterval(timerIntervals[id]);
+        t.running = false;
+        saveAll();
+        renderTimers();
+    } else { // start
+        t.running = true;
+        const el = document.getElementById(`timer-remaining-${id}`);
+        timerIntervals[id] = setInterval(()=>{
+            t.remaining = Math.max(0, t.remaining-1);
+            if (el) el.textContent = formatTime(t.remaining);
+            if (t.remaining <= 0) {
+                clearInterval(timerIntervals[id]);
+                t.running = false;
+                t.remaining = t.duration;
+                saveAll();
+                renderTimers();
+                playBeep(0.2, 0.12);
+                notify(`Timer finished: ${t.name}`, 'Your timer completed.');
+            } else saveAll();
+        },1000);
+        renderTimers();
+    }
+}
+function deleteTimer(id){
+    if (timerIntervals[id]) { clearInterval(timerIntervals[id]); delete timerIntervals[id]; }
+    timers = timers.filter(x=>x.id!==id);
+    saveAll();
+    renderTimers();
+}
+
+/* ========= Stopwatch ========= */
+function startStopwatch(){
+    if (stopwatchRunning) return;
+    const startAt = Date.now() - stopwatchTime;
+    stopwatchRunning = true;
+    document.getElementById('stopwatch-start').style.display='none';
+    document.getElementById('stopwatch-pause').style.display='inline-flex';
+    document.getElementById('stopwatch-lap').disabled = false;
+    stopwatchInterval = setInterval(()=>{
+        stopwatchTime = Date.now() - startAt;
+        document.getElementById('stopwatch-time').textContent = formatStopwatchTime(stopwatchTime);
+    }, 50);
+}
+function pauseStopwatch(){
+    if (!stopwatchRunning) return;
+    stopwatchRunning = false;
+    clearInterval(stopwatchInterval);
+    document.getElementById('stopwatch-start').style.display='inline-flex';
+    document.getElementById('stopwatch-pause').style.display='none';
+}
+function resetStopwatch(){
+    pauseStopwatch();
+    stopwatchTime = 0; laps = [];
+    document.getElementById('stopwatch-time').textContent = formatStopwatchTime(0);
+    document.getElementById('stopwatch-lap').disabled = true;
+    document.getElementById('laps-container').style.display='none';
+    renderLaps();
+}
+function addLap(){
+    if (!stopwatchRunning) return;
+    laps.unshift({ time: stopwatchTime, label: `Lap ${laps.length+1}` });
+    renderLaps();
+}
+function renderLaps(){
+    const cont = document.getElementById('laps-list');
+    cont.innerHTML = '';
+    document.getElementById('lap-count').textContent = laps.length;
+    if (!laps.length) { document.getElementById('laps-container').style.display='none'; return; }
+    document.getElementById('laps-container').style.display='block';
+    laps.forEach((l, i)=>{
+        const d = document.createElement('div');
+        d.className = 'flex justify-between items-center bg-slate-800/40 px-3 py-2 rounded';
+        d.innerHTML = `<div class="text-sm text-gray-200">${escapeHtml(l.label)}</div><div class="text-sm font-mono text-gray-300">${formatStopwatchTime(l.time)}</div>`;
+        cont.appendChild(d);
+    });
+}
+
+/* ========= Alarms ========= */
+let alarmCheckInterval = null;
+function renderAlarms() {
+    const list = document.getElementById('alarms-list');
+    list.innerHTML = '';
+    if (!alarms.length) { document.getElementById('alarms-empty').style.display='block'; return; }
+    document.getElementById('alarms-empty').style.display='none';
+    alarms.forEach(a=>{
+        const card = document.createElement('div');
+        card.className = 'glassmorphism rounded-xl p-4 flex items-center justify-between';
+        const repeatText = (a.repeat && a.repeat.length) ? a.repeat.map(d=>['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d]).join(', ') : 'One-time';
+        card.innerHTML = `
+            <div>
+                <div class="font-semibold text-white">${escapeHtml(a.label||'Alarm')}</div>
+                <div class="text-xs text-gray-400 mt-1">${a.time} • ${repeatText}</div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button class="px-3 py-2 rounded bg-green-600 hover:bg-green-700 text-white" id="alarm-toggle-${a.id}">${a.enabled ? 'Disable' : 'Enable'}</button>
+                <button class="px-3 py-2 rounded border border-white/20 text-white" id="alarm-del-${a.id}">Delete</button>
+            </div>
+        `;
+        list.appendChild(card);
+        document.getElementById(`alarm-toggle-${a.id}`).onclick = () => toggleAlarm(a.id);
+        document.getElementById(`alarm-del-${a.id}`).onclick = () => { deleteAlarm(a.id); };
+    });
+}
+function showCreateAlarm(){ document.getElementById('create-alarm-modal').classList.add('show'); }
+function hideCreateAlarm(){ document.getElementById('create-alarm-modal').classList.remove('show'); }
+
+document.querySelectorAll('#day-buttons .day-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=> btn.classList.toggle('active'));
+});
+
+function createAlarm(){
+    const time = document.getElementById('new-alarm-time').value;
+    if (!time) return alert('Please pick a time');
+    const label = document.getElementById('new-alarm-label').value.trim() || 'Alarm';
+    const selected = Array.from(document.querySelectorAll('#day-buttons .day-btn.active')).map(b=>parseInt(b.dataset.day));
+    const id = 'a'+Date.now();
+    const alarm = { id, time, label, repeat: selected, enabled: true };
+    alarms.push(alarm);
+    saveAll();
+    renderAlarms();
+    hideCreateAlarm();
+}
+
+function toggleAlarm(id){
+    const a = alarms.find(x=>x.id===id); if(!a) return;
+    a.enabled = !a.enabled;
+    saveAll();
+    renderAlarms();
+}
+
+function deleteAlarm(id){
+    alarms = alarms.filter(x=>x.id!==id);
+    saveAll();
+    renderAlarms();
+}
+
+function checkAlarms(){
+    const now = new Date();
+    const hhmm = now.toTimeString().slice(0,5);
+    alarms.forEach(a=>{
+        if (!a.enabled) return;
+        if (a.time !== hhmm) return;
+        const dow = now.getDay();
+        if (a.repeat && a.repeat.length) {
+            if (!a.repeat.includes(dow)) return;
+        } else {
+            // one-time alarm — disable after trigger
+            a.enabled = false;
+        }
+        playBeep(0.2,0.4, 'tri');
+        notify(`Alarm: ${a.label}`, `It's ${a.time}`);
+        // small cooldown: mark temporary timestamp to avoid multiple triggers within the same minute
+        a._lastTriggered = now.getTime();
+    });
+    saveAll();
+}
+
+if (!alarmCheckInterval) alarmCheckInterval = setInterval(checkAlarms, 1000);
+
+/* ========= Focus Mode ========= */
+function renderFocusUI(){
+    document.getElementById('focus-time').textContent = formatTime(focusRemainingTime);
+    const percent = 1 - (focusRemainingTime / focusTime);
+    const circle = document.getElementById('focus-progress-circle');
+    if (circle) {
+        const full = 2*Math.PI*45;
+        const offset = Math.max(0, full - full*percent);
+        circle.setAttribute('stroke-dashoffset', offset.toFixed(3));
+    }
+}
+renderFocusUI();
+
+function startFocus(){
+    if (focusRunning) return;
+    focusRunning = true;
+    document.getElementById('focus-pause').style.display='inline-flex';
+    document.getElementById('focus-start').style.display='none';
+    document.getElementById('focus-status').style.display='block';
+    ensureAudioCtx();
+    focusInterval = setInterval(()=>{
+        if (focusRemainingTime>0) {
+            focusRemainingTime--;
+            renderFocusUI();
+        } else {
+            clearInterval(focusInterval);
+            focusRunning = false;
+            focusRemainingTime = focusTime;
+            document.getElementById('focus-pause').style.display='none';
+            document.getElementById('focus-start').style.display='inline-flex';
+            document.getElementById('focus-completed').style.display='block';
+            // award coins: example rule: 1 coin per minute
+            const coinsEarned = Math.max(1, Math.floor(focusTime/60));
+            focusCoins += coinsEarned;
+            todayStats.sessions = (todayStats.sessions||0)+1;
+            todayStats.focusTime = (todayStats.focusTime||0) + focusTime;
+            todayStats.coins = (todayStats.coins||0) + coinsEarned;
+            saveAll();
+            updateFocusCoinsUI(); updateTodayStatsUI();
+            playBeep(0.2, 0.6, 'sine');
+            notify('Focus session done', `You earned ${coinsEarned} coins 🎉`);
+            setTimeout(()=>{ document.getElementById('focus-completed').style.display='none'; }, 5000);
+            renderFocusUI();
+        }
+    }, 1000);
+}
+
+function pauseFocus(){
+    if (!focusRunning) return;
+    focusRunning = false;
+    if (focusInterval) clearInterval(focusInterval);
+    document.getElementById('focus-pause').style.display='none';
+    document.getElementById('focus-start').style.display='inline-flex';
+}
+
+function resetFocus(){
+    pauseFocus();
+    focusRemainingTime = focusTime;
+    document.getElementById('focus-completed').style.display='none';
+    renderFocusUI();
+}
+
+/* ========= Ambient sounds (WebAudio generated: rain/forest/ocean/cafe/white-noise) ========= */
+function changeAmbientSound(){
+    const sel = document.getElementById('ambient-select').value;
+    if (!sel) { stopAmbientAll(); document.getElementById('ambient-volume-control').style.display='none'; return; }
+    ensureAudioCtx();
+    startAmbient(sel);
+    document.getElementById('ambient-volume-control').style.display='block';
+}
+function changeAmbientVolume(){
+    const v = parseInt(document.getElementById('ambient-volume').value) / 100;
+    document.getElementById('ambient-volume-display').textContent = Math.round(v*100)+'%';
+    Object.values(ambientNodes).forEach(n => { if (n && n.gain) n.gain.gain.setTargetAtTime(v, audioCtx.currentTime, 0.01); });
+}
+function toggleAmbientMute(){
+    ambientMuted = !ambientMuted;
+    if (ambientMuted) {
+        Object.values(ambientNodes).forEach(n=>{ if(n && n.gain) n.gain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.01); });
+        document.getElementById('ambient-mute').classList.add('opacity-50');
+    } else {
+        changeAmbientVolume();
+        document.getElementById('ambient-mute').classList.remove('opacity-50');
+    }
+}
+function stopAmbientAll(){
+    Object.values(ambientNodes).forEach(n=>{
+        try { if (n && n.stop) n.stop(); } catch(e){}
+        try { if (n && n.node && n.node.disconnect) n.node.disconnect(); } catch(e){}
+    });
+    ambientNodes = {};
+}
+
+/* Ambient generator helpers */
+function createWhiteNoiseNode() {
+    const bufferSize = 2 * audioCtx.sampleRate;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i=0;i<bufferSize;i++) data[i] = Math.random()*2-1;
+    const node = audioCtx.createBufferSource();
+    node.buffer = buffer;
+    node.loop = true;
+    const gain = audioCtx.createGain(); gain.gain.value = 0.5;
+    node.connect(gain).connect(audioCtx.destination);
+    node.start(0);
+    return { node, gain };
+}
+
+function createFilteredNoise(type='rain') {
+    const { node, gain } = createWhiteNoiseNode();
+    const biquad = audioCtx.createBiquadFilter();
+    if (type==='rain') { biquad.type='highpass'; biquad.frequency.value = 600; gain.gain.value = 0.2; }
+    else if (type==='ocean') { biquad.type='lowpass'; biquad.frequency.value = 900; gain.gain.value = 0.25; }
+    else if (type==='forest') { biquad.type='bandpass'; biquad.frequency.value = 1200; gain.gain.value = 0.15; }
+    else { biquad.type='lowpass'; biquad.frequency.value = 1200; gain.gain.value = 0.2; }
+    node.disconnect();
+    node.connect(biquad).connect(gain).connect(audioCtx.destination);
+    return { node, gain, filter: biquad };
+}
+
+/* Coffee shop simulated: mix filtered noise + occasional "speech bubble" synthesized */
+function createCafeSound() {
+    // base chatter (low vol filtered noise)
+    const base = createFilteredNoise('cafe');
+    base.gain.gain.value = 0.08;
+    // occasional synth blips to mimic cups
+    const oscGain = audioCtx.createGain(); oscGain.gain.value = 0;
+    oscGain.connect(audioCtx.destination);
+    const schedule = setInterval(()=>{
+        const o = audioCtx.createOscillator();
+        o.type='sine';
+        o.frequency.value = 600 + Math.random()*400;
+        const g = audioCtx.createGain(); g.gain.value = 0.001;
+        o.connect(g).connect(oscGain);
+        o.start();
+        g.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.6);
+        setTimeout(()=>{ try{ o.stop(); }catch(e){} }, 800);
+    }, 1200 + Math.random()*1600);
+    return { node: base.node, gain: base.gain, _scheduler: schedule, stop: ()=>{ clearInterval(schedule); try{ base.node.stop(); }catch(e){} } };
+}
+
+function startAmbient(kind) {
+    stopAmbientAll();
+    if (!audioCtx) ensureAudioCtx();
+    if (kind === 'white-noise') {
+        ambientNodes.white = createWhiteNoiseNode();
+    } else if (kind === 'rain') {
+        ambientNodes.rain = createFilteredNoise('rain');
+    } else if (kind === 'ocean') {
+        ambientNodes.ocean = createFilteredNoise('ocean');
+    } else if (kind === 'forest') {
+        ambientNodes.forest = createFilteredNoise('forest');
+    } else if (kind === 'cafe') {
+        ambientNodes.cafe = createCafeSound();
+    }
+    // apply chosen volume
+    changeAmbientVolume();
+}
+
+/* ========= Simple beep for notifications ========= */
+function playBeep(volume=0.2, duration=0.2, type='sine'){
+    ensureAudioCtx();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = type;
+    o.frequency.value = 880;
+    g.gain.value = 0;
+    o.connect(g).connect(audioCtx.destination);
+    const now = audioCtx.currentTime;
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(volume, now + 0.01);
+    o.start(now);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    setTimeout(()=>{ try{ o.stop(); }catch(e){} }, (duration+0.02)*1000);
+}
+
+/* ========= Notifications ========= */
+function notify(title, body) {
+    if (!("Notification" in window)) {
+        alert(title+"\n\n"+body);
+        return;
+    }
+    if (Notification.permission === "granted") {
+        const n = new Notification(title, { body });
+        try{ n.onclick = ()=> window.focus(); }catch(e){}
+    } else if (Notification.permission !== "denied") {
+        Notification.requestPermission().then(perm => { if (perm==='granted') notify(title,body); else alert(title+"\n\n"+body); });
+    } else {
+        alert(title+"\n\n"+body);
+    }
+}
+
+/* ========= Utility: load initial UI ========= */
+renderTimers();
+renderAlarms();
+renderLaps();
+
+/* ========= small safety: inform user to interact for audio (browsers require gesture) ========= */
+window.addEventListener('click', function enableAudioOnGesture() {
+    if (!audioCtx) {
+        try { audioCtx = new (window.AudioContext||window.webkitAudioContext)(); audioCtx.resume(); }
+        catch(e){}
+    }
+    window.removeEventListener('click', enableAudioOnGesture);
+});
+
+/* ========= simple escape hatch for debugging via console ========= */
+window.appState = {
+    timers, alarms, get focusCoins(){ return focusCoins; }
+};
+
+/* ========= Initialize icons again (rendered dynamic elements) ========= */
+lucide.createIcons();
+
+/* ========= On load: attempt to ask for notification permission politely ========= */
+if (Notification && Notification.permission !== 'granted') {
+    try { Notification.requestPermission(); } catch(e){}
+}
+
+/* ========= Expose some functions to global for modal controls referenced inline ========= */
+window.showCreateTimer = showCreateTimer;
+window.hideCreateTimer = hideCreateTimer;
+window.createTimer = createTimer;
+window.showCreateAlarm = showCreateAlarm;
+window.hideCreateAlarm = hideCreateAlarm;
+window.createAlarm = createAlarm;
+window.startStopwatch = startStopwatch;
+window.pauseStopwatch = pauseStopwatch;
+window.resetStopwatch = resetStopwatch;
+window.addLap = addLap;
+window.startFocus = startFocus;
+window.pauseFocus = pauseFocus;
+window.resetFocus = resetFocus;
+window.changeAmbientSound = changeAmbientSound;
+window.changeAmbientVolume = changeAmbientVolume;
+window.toggleAmbientMute = toggleAmbientMute;
+</script>
+</body>
+</html>
